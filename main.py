@@ -21,7 +21,7 @@ from ulauncher.api.shared.action.OpenUrlAction import OpenUrlAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.action.RunScriptAction import RunScriptAction
 
-STEAM_SEARCH_API  = "https://store.steampowered.com/api/storesearch/"
+STEAM_SEARCH_API  = "https://store.steampowered.com/search/results"
 PROTONDB_API      = "https://www.protondb.com/api/v1/reports/summaries/{}.json"
 STEAM_OWNED_API   = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
 STEAM_CAPSULE_URL = "https://cdn.akamaized.net/steam/apps/{}/capsule_sm_120.jpg"
@@ -161,17 +161,20 @@ def fetch_capsule_image(app_id: str) -> Optional[str]:
 def search_steam(query: str, max_results: int) -> List[Dict]:
     resp = requests.get(
         STEAM_SEARCH_API,
-        params={"term": query, "cc": "us", "l": "en", "realm": 1},
+        params={
+            "term": query,
+            "category1": 998,  # games only (excludes DLC, soundtracks, demos)
+            "supportedlang": "english",
+            "ndl": 1,
+            "force_infinite": 1,
+        },
+        headers={"X-Requested-With": "XMLHttpRequest"},
         timeout=5,
     )
     resp.raise_for_status()
-    items = resp.json().get("items", [])
-    games = [
-        {"app_id": str(item["id"]), "name": item["name"]}
-        for item in items
-        if item.get("type") == "game"
-    ]
-    return games[:max_results]
+    app_ids = re.findall(r'data-ds-appid="(\d+)"', resp.text)
+    names   = re.findall(r'<span class="title">([^<]+)</span>', resp.text)
+    return [{"app_id": aid, "name": name} for aid, name in zip(app_ids[:max_results], names[:max_results])]
 
 
 def get_rating(app_id: str, cache: RatingsCache, ttl_hours: int) -> tuple:
