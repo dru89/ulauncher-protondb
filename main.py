@@ -166,7 +166,12 @@ def search_steam(query: str, max_results: int) -> List[Dict]:
     )
     resp.raise_for_status()
     items = resp.json().get("items", [])
-    return [{"app_id": str(item["id"]), "name": item["name"]} for item in items[:max_results]]
+    games = [
+        {"app_id": str(item["id"]), "name": item["name"]}
+        for item in items
+        if item.get("type") == "game"
+    ]
+    return games[:max_results]
 
 
 def get_rating(app_id: str, cache: RatingsCache, ttl_hours: int) -> tuple:
