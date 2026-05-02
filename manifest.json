@@ -1,0 +1,72 @@
+{
+  "required_api_version": "^2.0.0",
+  "name": "ProtonDB Compatibility",
+  "description": "Search Steam games and check ProtonDB Linux compatibility ratings",
+  "developer_name": "Drew Hays",
+  "icon": "images/icon.png",
+  "options": {
+    "query_debounce": 0.35
+  },
+  "preferences": [
+    {
+      "id": "keyword",
+      "type": "keyword",
+      "name": "Keyword",
+      "description": "Keyword to trigger game search",
+      "default_value": "proton"
+    },
+    {
+      "id": "max_results",
+      "type": "select",
+      "name": "Max results",
+      "description": "Maximum number of games to show",
+      "default_value": "8",
+      "options": [
+        {"value": "5",  "text": "5"},
+        {"value": "8",  "text": "8"},
+        {"value": "10", "text": "10"}
+      ]
+    },
+    {
+      "id": "min_rating",
+      "type": "select",
+      "name": "Minimum rating",
+      "description": "Hide games below this ProtonDB tier",
+      "default_value": "any",
+      "options": [
+        {"value": "any",      "text": "Any"},
+        {"value": "bronze",   "text": "Bronze or above"},
+        {"value": "silver",   "text": "Silver or above"},
+        {"value": "gold",     "text": "Gold or above"},
+        {"value": "platinum", "text": "Platinum only"}
+      ]
+    },
+    {
+      "id": "cache_ttl_hours",
+      "type": "select",
+      "name": "Rating cache TTL",
+      "description": "How long to keep cached ProtonDB ratings before refreshing",
+      "default_value": "24",
+      "options": [
+        {"value": "6",   "text": "6 hours"},
+        {"value": "24",  "text": "24 hours"},
+        {"value": "72",  "text": "3 days"},
+        {"value": "168", "text": "1 week"}
+      ]
+    },
+    {
+      "id": "steam_api_key",
+      "type": "input",
+      "name": "Steam API key",
+      "description": "For library pre-warming. Get one at steamcommunity.com/dev/apikey",
+      "default_value": ""
+    },
+    {
+      "id": "steam_id",
+      "type": "input",
+      "name": "Steam ID",
+      "description": "Your 64-bit Steam ID. Find at steamcommunity.com/id/username",
+      "default_value": ""
+    }
+  ]
+}
