@@ -5,7 +5,7 @@ import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Thread
+from threading import Lock, Thread
 from typing import Dict, List, Optional, Set
 
 import requests
@@ -59,6 +59,7 @@ class RatingsCache:
     def __init__(self):
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        self._lock = Lock()
         self._conn = sqlite3.connect(str(RATINGS_DB), check_same_thread=False)
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS ratings (
@@ -72,18 +73,20 @@ class RatingsCache:
 
     def get(self, app_id: str, ttl_hours: int) -> Optional[Dict]:
         cutoff = int(time.time()) - ttl_hours * 3600
-        row = self._conn.execute(
-            "SELECT tier, report_count FROM ratings WHERE app_id = ? AND cached_at > ?",
-            (app_id, cutoff),
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT tier, report_count FROM ratings WHERE app_id = ? AND cached_at > ?",
+                (app_id, cutoff),
+            ).fetchone()
         return {"tier": row[0], "report_count": row[1]} if row else None
 
     def set(self, app_id: str, tier: str, report_count: int):
-        self._conn.execute(
-            "INSERT OR REPLACE INTO ratings (app_id, tier, report_count, cached_at) VALUES (?, ?, ?, ?)",
-            (app_id, tier, report_count, int(time.time())),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO ratings (app_id, tier, report_count, cached_at) VALUES (?, ?, ?, ?)",
+                (app_id, tier, report_count, int(time.time())),
+            )
+            self._conn.commit()
 
     def image_path(self, app_id: str) -> Optional[str]:
         p = IMAGES_DIR / f"{app_id}.jpg"
@@ -171,7 +174,10 @@ def get_rating(app_id: str, cache: RatingsCache, ttl_hours: int) -> tuple:
     if cached:
         return cached["tier"], cached["report_count"]
     tier, count = fetch_protondb_rating(app_id)
-    cache.set(app_id, tier, count)
+    try:
+        cache.set(app_id, tier, count)
+    except Exception:
+        pass
     return tier, count
 
 
