@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
-from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent, PreferencesEvent
+from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent, PreferencesEvent, PreferencesUpdateEvent
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.CopyToClipboardAction import CopyToClipboardAction
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
@@ -89,9 +89,6 @@ class RatingsCache:
             )
             self._conn.commit()
 
-    def image_path(self, app_id: str) -> Optional[str]:
-        p = IMAGES_DIR / f"{app_id}.jpg"
-        return str(p) if p.exists() else None
 
 
 def get_installed_app_ids() -> Set[str]:
@@ -263,6 +260,7 @@ class ProtonExtension(Extension):
         self.installed_ids: Set[str] = set()
         self.owned_ids: Set[str] = set()
         self.subscribe(PreferencesEvent, PreferencesEventListener())
+        self.subscribe(PreferencesUpdateEvent, PreferencesUpdateEventListener())
         self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
         self.subscribe(ItemEnterEvent, ItemEnterEventListener())
 
@@ -271,6 +269,13 @@ class PreferencesEventListener(EventListener):
     def on_event(self, event, extension):
         extension.preferences = event.preferences
         Thread(target=prewarm, args=(extension,), daemon=True).start()
+
+
+class PreferencesUpdateEventListener(EventListener):
+    def on_event(self, event, extension):
+        extension.preferences[event.id] = event.new_value
+        if event.id in ("steam_api_key", "steam_id"):
+            Thread(target=prewarm, args=(extension,), daemon=True).start()
 
 
 class KeywordQueryEventListener(EventListener):
