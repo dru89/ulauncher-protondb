@@ -201,6 +201,14 @@ def meets_min_rating(tier: str, min_rating: str) -> bool:
     return TIER_RANK.get(tier, 5) <= MIN_TIER_RANK.get(min_rating, 5)
 
 
+def name_relevance(name: str, query: str) -> int:
+    n, q = name.lower(), query.lower()
+    if n == q:      return 0
+    if n.startswith(q): return 1
+    if q in n:      return 2
+    return 3
+
+
 def format_description(game: Game) -> str:
     emoji = TIER_EMOJI.get(game.tier, "❓")
     tier_label = game.tier.capitalize() if game.tier else "Pending"
@@ -338,8 +346,12 @@ class KeywordQueryEventListener(EventListener):
             )
             game_list.append((game, icon))
 
-        # Rated games first (by tier), then by report count; pending/0-report last
-        game_list.sort(key=lambda x: (TIER_RANK.get(x[0].tier, 5), -x[0].report_count))
+        # Name relevance first, then ProtonDB quality; pending/0-report games last
+        game_list.sort(key=lambda x: (
+            name_relevance(x[0].name, query),
+            TIER_RANK.get(x[0].tier, 5),
+            -x[0].report_count,
+        ))
 
         items = [
             ExtensionResultItem(
