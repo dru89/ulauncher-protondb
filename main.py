@@ -41,9 +41,9 @@ TIER_EMOJI = {
     "pending":  "❓",
 }
 
-TIER_RANK = {"platinum": 0, "gold": 1, "silver": 2, "bronze": 3, "borked": 4, "pending": 5}
+TIER_RANK = {"platinum": 0, "gold": 1, "silver": 2, "bronze": 3, "borked": 4, "pending": 5, "unknown": 6}
 
-MIN_TIER_RANK = {"any": 5, "bronze": 3, "silver": 2, "gold": 1, "platinum": 0}
+MIN_TIER_RANK = {"any": 6, "bronze": 3, "silver": 2, "gold": 1, "platinum": 0}
 
 
 @dataclass
@@ -138,7 +138,7 @@ def fetch_protondb_rating(app_id: str) -> tuple:
     try:
         resp = requests.get(PROTONDB_API.format(app_id), timeout=5)
         if resp.status_code == 404:
-            return "pending", 0
+            return "unknown", 0
         resp.raise_for_status()
         data = resp.json()
         return data.get("tier", "pending"), data.get("total", 0)
@@ -210,10 +210,6 @@ def name_relevance(name: str, query: str) -> int:
 
 
 def format_description(game: Game) -> str:
-    emoji = TIER_EMOJI.get(game.tier, "❓")
-    tier_label = game.tier.capitalize() if game.tier else "Pending"
-    reports = f"{game.report_count} report{'s' if game.report_count != 1 else ''}"
-
     if game.installed:
         status = "  ·  ✓ Installed"
     elif game.owned:
@@ -221,6 +217,12 @@ def format_description(game: Game) -> str:
     else:
         status = ""
 
+    if game.tier == "unknown":
+        return f"Not on ProtonDB{status}"
+
+    emoji = TIER_EMOJI.get(game.tier, "❓")
+    tier_label = game.tier.capitalize() if game.tier else "Pending"
+    reports = f"{game.report_count} report{'s' if game.report_count != 1 else ''}"
     return f"{emoji} {tier_label}  ·  {reports}{status}"
 
 

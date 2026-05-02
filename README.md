@@ -4,7 +4,19 @@ Search Steam games and check their [ProtonDB](https://www.protondb.com) Linux co
 
 ## Installation
 
-Open Ulauncher preferences → Extensions → Add extension and paste:
+This extension requires `requests` and `beautifulsoup4`. Ulauncher does not install dependencies automatically, so install them first.
+
+On Arch Linux:
+```bash
+sudo pacman -S python-requests python-beautifulsoup4
+```
+
+On other distributions:
+```bash
+pip install --user requests beautifulsoup4
+```
+
+Then open Ulauncher preferences → Extensions → Add extension and paste:
 
 ```
 https://github.com/dru89/ulauncher-protondb
@@ -47,6 +59,7 @@ Selecting a result opens an action menu with context-aware options:
 | 🥉 | Bronze | Runs but with significant issues |
 | 💀 | Borked | Doesn't run |
 | ❓ | Pending | Not enough reports yet |
+| — | Not on ProtonDB | No entry in the ProtonDB database |
 
 ## Preferences
 
