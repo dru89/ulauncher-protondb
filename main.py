@@ -9,6 +9,7 @@ from threading import Lock, Thread
 from typing import Dict, List, Optional, Set
 
 import requests
+from bs4 import BeautifulSoup
 
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -172,9 +173,16 @@ def search_steam(query: str, max_results: int) -> List[Dict]:
         timeout=5,
     )
     resp.raise_for_status()
-    app_ids = re.findall(r'data-ds-appid="(\d+)"', resp.text)
-    names   = re.findall(r'<span class="title">([^<]+)</span>', resp.text)
-    return [{"app_id": aid, "name": name} for aid, name in zip(app_ids[:max_results], names[:max_results])]
+    soup = BeautifulSoup(resp.text, "html.parser")
+    results = []
+    for row in soup.select("a[data-ds-appid]"):
+        app_id = row["data-ds-appid"]
+        title  = row.select_one("span.title")
+        if title:
+            results.append({"app_id": app_id, "name": title.get_text()})
+        if len(results) >= max_results:
+            break
+    return results
 
 
 def get_rating(app_id: str, cache: RatingsCache, ttl_hours: int) -> tuple:
