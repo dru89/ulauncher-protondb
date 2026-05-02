@@ -25,7 +25,7 @@ from ulauncher.api.shared.action.RunScriptAction import RunScriptAction
 STEAM_SEARCH_API  = "https://store.steampowered.com/search/results"
 PROTONDB_API      = "https://www.protondb.com/api/v1/reports/summaries/{}.json"
 STEAM_OWNED_API   = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
-STEAM_CAPSULE_URL = "https://cdn.akamaized.net/steam/apps/{}/capsule_sm_120.jpg"
+STEAM_CAPSULE_URL = "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/capsule_sm_120.jpg"
 
 CACHE_DIR   = Path.home() / ".cache" / "ulauncher-protondb"
 RATINGS_DB  = CACHE_DIR / "ratings.db"
@@ -311,7 +311,7 @@ class KeywordQueryEventListener(EventListener):
             rating_futs = {aid: ex.submit(get_rating, aid, extension.cache, ttl) for aid in app_ids}
             image_futs  = {aid: ex.submit(fetch_capsule_image, aid) for aid in app_ids}
 
-        items = []
+        game_list = []
         for r in search_results:
             aid = r["app_id"]
 
@@ -323,7 +323,10 @@ class KeywordQueryEventListener(EventListener):
             if not meets_min_rating(tier, min_rating):
                 continue
 
-            icon = extension.cache.image_path(aid) or "images/icon.png"
+            try:
+                icon = image_futs[aid].result() or "images/icon.png"
+            except Exception:
+                icon = "images/icon.png"
 
             game = Game(
                 app_id=aid,
@@ -333,8 +336,13 @@ class KeywordQueryEventListener(EventListener):
                 installed=aid in extension.installed_ids,
                 owned=aid in extension.owned_ids,
             )
+            game_list.append((game, icon))
 
-            items.append(ExtensionResultItem(
+        # Rated games first (by tier), then by report count; pending/0-report last
+        game_list.sort(key=lambda x: (TIER_RANK.get(x[0].tier, 5), -x[0].report_count))
+
+        items = [
+            ExtensionResultItem(
                 icon=icon,
                 name=game.name,
                 description=format_description(game),
@@ -347,7 +355,9 @@ class KeywordQueryEventListener(EventListener):
                     }},
                     keep_app_open=True,
                 ),
-            ))
+            )
+            for game, icon in game_list
+        ]
 
         if not items:
             return RenderResultListAction([
